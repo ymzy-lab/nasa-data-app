@@ -11,7 +11,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 
 # ------------------------------------------------------------
 # NASA Data Experience App
-# Mobile-first UX/UI version with interactive Plotly charts.
+# Mobile-first UX/UI version with stable mobile Plotly controls.
 # Comments are written in English as requested.
 # ------------------------------------------------------------
 
@@ -175,7 +175,7 @@ st.markdown(
 <div class="glass-card">
 <strong>体験ミッション</strong><br>
 場所を選ぶ → NASAデータ取得 → AIが日射量を予測 → ミッション判定。<br>
-<span class="small-caption">グラフはスマホでピンチ拡大・ドラッグ移動できる。</span>
+<span class="small-caption">スマホではグラフ下のスライダー、右上の＋−ボタン、リセットボタンで拡大縮小できる。</span>
 </div>
 """,
     unsafe_allow_html=True
@@ -306,8 +306,57 @@ def fetch_nasa_power_data(latitude, longitude, start, end):
 # Plotly helper functions
 # ------------------------------------------------------------
 
-def apply_mobile_plotly_layout(fig, height=560):
-    """Apply a dark, mobile-friendly Plotly layout."""
+def apply_mobile_timeseries_layout(fig, height=580):
+    """Apply a dark, mobile-friendly layout for time-series charts."""
+
+    fig.update_layout(
+        height=height,
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=8, r=8, t=56, b=8),
+        dragmode="pan",
+        hovermode="x unified",
+        font=dict(size=13),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="rgba(255,255,255,0.14)",
+        zeroline=False,
+        rangeslider=dict(visible=True, thickness=0.11),
+        rangeselector=dict(
+            buttons=list([
+                dict(count=30, label="30d", step="day", stepmode="backward"),
+                dict(count=90, label="90d", step="day", stepmode="backward"),
+                dict(count=180, label="180d", step="day", stepmode="backward"),
+                dict(step="all", label="All")
+            ]),
+            bgcolor="rgba(255,255,255,0.14)",
+            activecolor="rgba(255,218,92,0.85)",
+            font=dict(color="#ffffff")
+        )
+    )
+
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor="rgba(255,255,255,0.14)",
+        zeroline=False,
+        fixedrange=False
+    )
+
+    return fig
+
+
+def apply_mobile_scatter_layout(fig, height=620):
+    """Apply a dark, mobile-friendly layout for scatter charts."""
 
     fig.update_layout(
         height=height,
@@ -326,29 +375,72 @@ def apply_mobile_plotly_layout(fig, height=560):
             x=1
         )
     )
+
     fig.update_xaxes(
         showgrid=True,
         gridcolor="rgba(255,255,255,0.14)",
-        zeroline=False
+        zeroline=False,
+        fixedrange=False
     )
+
     fig.update_yaxes(
         showgrid=True,
         gridcolor="rgba(255,255,255,0.14)",
-        zeroline=False
+        zeroline=False,
+        fixedrange=False
     )
+
+    return fig
+
+
+def apply_mobile_bar_layout(fig, height=440):
+    """Apply a dark, mobile-friendly layout for bar charts."""
+
+    fig.update_layout(
+        height=height,
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=8, r=8, t=56, b=8),
+        dragmode="pan",
+        hovermode="closest",
+        font=dict(size=13)
+    )
+
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="rgba(255,255,255,0.14)",
+        zeroline=False,
+        fixedrange=False
+    )
+
+    fig.update_yaxes(
+        showgrid=False,
+        zeroline=False,
+        fixedrange=False
+    )
+
     return fig
 
 
 def show_interactive_chart(fig):
-    """Render a Plotly chart with mobile zoom enabled."""
+    """Render a Plotly chart with stable mobile controls."""
 
     st.plotly_chart(
         fig,
         use_container_width=True,
         config={
-            "scrollZoom": True,
+            "scrollZoom": False,
             "displaylogo": False,
             "responsive": True,
+            "doubleClick": "reset",
+            "modeBarButtonsToAdd": [
+                "zoom2d",
+                "pan2d",
+                "zoomIn2d",
+                "zoomOut2d",
+                "resetScale2d"
+            ],
             "modeBarButtonsToRemove": [
                 "select2d",
                 "lasso2d",
@@ -500,7 +592,7 @@ tab1, tab2, tab3, tab4 = st.tabs(["📈 日射", "🤖 予測", "🔍 理由", "
 
 with tab1:
     st.markdown("#### 日射量の変化")
-    st.caption("スマホでは2本指でピンチ拡大、ドラッグで移動できる。")
+    st.caption("スマホではグラフ下の範囲スライダー、30d/90d/180dボタン、右上の＋−ボタンで拡大縮小できる。")
 
     chart_df = df.reset_index().rename(columns={"index": "date"})
 
@@ -522,7 +614,7 @@ with tab1:
         }
     )
     fig1.update_traces(line=dict(width=3))
-    fig1 = apply_mobile_plotly_layout(fig1, height=560)
+    fig1 = apply_mobile_timeseries_layout(fig1, height=590)
     show_interactive_chart(fig1)
 
     st.markdown(
@@ -536,7 +628,7 @@ with tab1:
 
 with tab2:
     st.markdown("#### AI予測 vs 実測")
-    st.caption("この散布図もピンチ拡大・ドラッグ移動できる。点が斜め線に近いほどAI予測が正確だ。")
+    st.caption("スマホでは範囲をなぞって拡大、右上の＋−ボタンで拡大縮小、家アイコンで全体表示に戻る。点が斜め線に近いほどAI予測が正確だ。")
 
     pred_df = pd.DataFrame({
         "Actual": y_test.values,
@@ -546,6 +638,9 @@ with tab2:
 
     min_v = float(min(pred_df["Actual"].min(), pred_df["Predicted"].min()))
     max_v = float(max(pred_df["Actual"].max(), pred_df["Predicted"].max()))
+    pad = (max_v - min_v) * 0.06 if max_v > min_v else 0.5
+    axis_min = min_v - pad
+    axis_max = max_v + pad
 
     fig2 = px.scatter(
         pred_df,
@@ -567,8 +662,8 @@ with tab2:
 
     fig2.add_trace(
         go.Scatter(
-            x=[min_v, max_v],
-            y=[min_v, max_v],
+            x=[axis_min, axis_max],
+            y=[axis_min, axis_max],
             mode="lines",
             name="Perfect prediction",
             line=dict(width=2, dash="dash")
@@ -576,9 +671,9 @@ with tab2:
     )
 
     fig2.update_traces(marker=dict(size=9), selector=dict(mode="markers"))
-    fig2.update_xaxes(range=[min_v, max_v])
-    fig2.update_yaxes(range=[min_v, max_v])
-    fig2 = apply_mobile_plotly_layout(fig2, height=620)
+    fig2.update_xaxes(range=[axis_min, axis_max])
+    fig2.update_yaxes(range=[axis_min, axis_max])
+    fig2 = apply_mobile_scatter_layout(fig2, height=640)
     show_interactive_chart(fig2)
 
     st.markdown(
@@ -619,7 +714,7 @@ with tab3:
         hover_data={"importance": ":.3f"}
     )
     fig3.update_traces(marker_line_width=0)
-    fig3 = apply_mobile_plotly_layout(fig3, height=440)
+    fig3 = apply_mobile_bar_layout(fig3, height=450)
     show_interactive_chart(fig3)
 
     top_feature = importance.iloc[-1]["label"]
